@@ -511,7 +511,9 @@ where
             let area = &mut instance.arenas.areas[area_idx];
 
             let area_type = args.dnode.get_string();
-            let area_type = AreaType::try_from_yang(&area_type).unwrap();
+            // This should not fail as validation has already checked this
+            let area_type = AreaType::try_from_yang(&area_type)
+                .expect("area_type should be valid after validation");
             area.config.area_type = area_type;
             area.config.summary = ospf::areas::area::summary::DFLT;
             area.config.default_cost = ospf::areas::area::default_cost::DFLT;
@@ -1665,7 +1667,11 @@ fn load_validation_callbacks() -> ValidationCallbacks {
         .path(ospf::areas::area::area_type::PATH)
         .validate(|args| {
             let area_type = args.dnode.get_string();
-            let area_type = AreaType::try_from_yang(&area_type).unwrap();
+            let area_type = AreaType::try_from_yang(&area_type)
+                .ok_or_else(|| format!(
+                    "invalid area type '{}'. Valid options are: 'ietf-ospf:normal-area', 'ietf-ospf:stub-area', 'ietf-ospf:nssa-area'",
+                    area_type
+                ))?;
             if area_type == AreaType::Nssa {
                 return Err("unsupported area type".to_string());
             }
